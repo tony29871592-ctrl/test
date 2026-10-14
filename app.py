@@ -25,7 +25,9 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # 2. 기존 HTML/JS 코드 복사 (스트림릿 호환 컴포넌트)
-html_code = """
+# ※ r"""...""" (raw 문자열): 좌표 입력 처리에 쓰는 JS 정규식의 역슬래시(\d, \s 등)가
+#    파이썬 문자열 처리 과정에서 바뀌지 않도록 r 접두사를 붙였습니다.
+html_code = r"""
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -56,6 +58,16 @@ html_code = """
         }
         canvas {
             touch-action: none;
+        }
+        kbd {
+            font-family: ui-monospace, monospace;
+            font-size: 10px;
+            padding: 1px 5px;
+            border: 1px solid #cbd5e1;
+            border-bottom-width: 2px;
+            border-radius: 4px;
+            background: #f8fafc;
+            color: #475569;
         }
     </style>
 </head>
@@ -129,6 +141,28 @@ html_code = """
                         </label>
                         <span class="text-slate-400"><i class="fa-solid fa-circle-info mr-1"></i>캔버스를 클릭하여 파란색 점을 생성하세요</span>
                     </div>
+                </div>
+
+                <!-- [추가] 좌표 직접 입력 패널 -->
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+                        <i class="fa-solid fa-keyboard text-indigo-500"></i> 좌표 직접 입력하기
+                    </h3>
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        <textarea id="coord-input" rows="2" spellcheck="false" autocomplete="off"
+                            class="flex-grow px-3 py-2 rounded-xl border border-slate-300 bg-slate-50 font-mono text-sm resize-y focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:bg-white"
+                            placeholder="예) (20,30) (40,50) (60,70)   또는   20,30   또는   20 30"></textarea>
+                        <button id="coord-add-btn" class="sm:w-28 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-sm transition flex items-center justify-center gap-1.5 text-xs sm:text-sm">
+                            <i class="fa-solid fa-circle-plus"></i> 점 추가
+                        </button>
+                    </div>
+                    <p class="text-[11px] text-slate-500 mt-2 leading-relaxed break-keep">
+                        <i class="fa-solid fa-circle-info mr-1 text-slate-400"></i>x, y는 각각 <strong class="text-indigo-600">0~100</strong> 사이의 수만 입력할 수 있어요.
+                        여러 점은 띄어쓰기나 줄바꿈으로 구분합니다.<br>
+                        <span class="whitespace-nowrap"><kbd>Enter</kbd> 추가</span> ·
+                        <span class="whitespace-nowrap"><kbd>Shift</kbd>+<kbd>Enter</kbd> 줄바꿈</span>
+                    </p>
+                    <div id="coord-feedback" class="hidden mt-2 p-2.5 rounded-xl text-xs border space-y-1"></div>
                 </div>
 
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
@@ -316,7 +350,11 @@ html_code = """
             presetPositive: document.getElementById('preset-positive'),
             presetNegative: document.getElementById('preset-negative'),
             presetNoisy: document.getElementById('preset-noisy'),
-            presetOutlier: document.getElementById('preset-outlier')
+            presetOutlier: document.getElementById('preset-outlier'),
+            // [추가] 좌표 직접 입력 요소
+            coordInput: document.getElementById('coord-input'),
+            coordAddBtn: document.getElementById('coord-add-btn'),
+            coordFeedback: document.getElementById('coord-feedback')
         };
 
         function resizeCanvas() {
@@ -705,6 +743,7 @@ html_code = """
         function loadPreset(type) {
             state.points = [];
             resetModel(true);
+            hideCoordFeedback();
 
             if (type === 'positive') {
                 for (let i = 10; i <= 90; i += 8) {
@@ -753,6 +792,167 @@ html_code = """
                 toast.classList.add('opacity-0');
                 setTimeout(() => toast.remove(), 300);
             }, 2500);
+        }
+
+        // ================================================================
+        // [추가] 키보드로 좌표 직접 입력하기
+        //  - 허용 형식: (20,30) / 20,30 / 20 30, 여러 점은 띄어쓰기·줄바꿈으로 구분
+        //  - x, y 모두 0~100 범위만 허용 (범위 밖은 추가하지 않고 안내)
+        // ================================================================
+        const COORD_MIN = 0;
+        const COORD_MAX = 100;
+        const NUMBER_PATTERN = /^[-+]?(?:\d+\.?\d*|\.\d+)$/;
+
+        // 입력 문자열 → { points: [{x, y, raw}], invalid: [원문 조각] }
+        function parseCoordinateText(text) {
+            const normalized = text
+                .replace(/（/g, '(')
+                .replace(/）/g, ')')
+                .replace(/，/g, ',');
+
+            const points = [];
+            const invalid = [];
+            let pending = null; // 괄호 없이 입력된 x값이 y값을 기다리는 중
+
+            const flushPending = () => {
+                if (pending) {
+                    invalid.push(pending.raw);
+                    pending = null;
+                }
+            };
+
+            // ① (괄호 묶음)  ② 괄호·쉼표·공백이 아닌 덩어리  ③ 짝이 맞지 않는 괄호
+            const tokenPattern = /\(([^()]*)\)|[^\s,;()]+|[()]/g;
+            let match;
+            while ((match = tokenPattern.exec(normalized)) !== null) {
+                const token = match[0];
+
+                if (match[1] !== undefined) {
+                    // 괄호 묶음: 안에 숫자가 정확히 2개여야 함
+                    flushPending();
+                    const parts = match[1].split(/[\s,;]+/).filter(Boolean);
+                    if (parts.length === 2 && NUMBER_PATTERN.test(parts[0]) && NUMBER_PATTERN.test(parts[1])) {
+                        points.push({ x: parseFloat(parts[0]), y: parseFloat(parts[1]), raw: token });
+                    } else {
+                        invalid.push(token);
+                    }
+                } else if (token === '(' || token === ')') {
+                    // 짝이 맞지 않는 괄호는 무시 (예: "(20,30" → 20,30으로 처리)
+                    continue;
+                } else if (NUMBER_PATTERN.test(token)) {
+                    // 괄호 없는 숫자: 두 개씩 짝지어 (x, y)로 처리
+                    if (pending) {
+                        points.push({ x: pending.value, y: parseFloat(token), raw: `${pending.raw},${token}` });
+                        pending = null;
+                    } else {
+                        pending = { value: parseFloat(token), raw: token };
+                    }
+                } else {
+                    flushPending();
+                    invalid.push(token);
+                }
+            }
+            flushPending();
+
+            return { points, invalid };
+        }
+
+        function isInCoordRange(v) {
+            return v >= COORD_MIN && v <= COORD_MAX;
+        }
+
+        function formatCoord(p) {
+            const f = (v) => String(Math.round(v * 100) / 100);
+            return `(${f(p.x)}, ${f(p.y)})`;
+        }
+
+        function summarizeList(items, max = 6) {
+            const shown = items.slice(0, max).join(', ');
+            return items.length > max ? `${shown} 외 ${items.length - max}개` : shown;
+        }
+
+        function escapeHtml(str) {
+            return String(str).replace(/[&<>"']/g, (c) => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[c]));
+        }
+
+        function hideCoordFeedback() {
+            if (!elements.coordFeedback) return;
+            elements.coordFeedback.classList.add('hidden');
+            elements.coordFeedback.innerHTML = '';
+        }
+
+        function renderCoordFeedback(accepted, outOfRange, invalid) {
+            const lines = [];
+
+            if (accepted.length > 0) {
+                lines.push(`✅ <strong>${accepted.length}개</strong>의 점을 추가했어요: <span class="font-mono">${escapeHtml(summarizeList(accepted.map(formatCoord)))}</span>`);
+            }
+            if (outOfRange.length > 0) {
+                lines.push(`⚠️ x, y는 <strong>${COORD_MIN}~${COORD_MAX}</strong> 사이여야 해서 추가하지 않았어요: <span class="font-mono">${escapeHtml(summarizeList(outOfRange.map(formatCoord)))}</span>`);
+            }
+            if (invalid.length > 0) {
+                lines.push(`❌ 좌표로 읽을 수 없는 입력이에요: <span class="font-mono">${escapeHtml(summarizeList(invalid))}</span> <span class="opacity-75">(x와 y 두 수를 짝지어 입력하세요. 예: (20,30))</span>`);
+            }
+
+            const hasProblem = outOfRange.length > 0 || invalid.length > 0;
+            if (hasProblem) {
+                lines.push(`<span class="opacity-75">추가하지 못한 입력은 입력창에 남겨 두었어요. 고친 뒤 다시 추가해 보세요.</span>`);
+            }
+
+            let tone;
+            if (!hasProblem) tone = 'bg-emerald-50 text-emerald-800 border-emerald-200';
+            else if (accepted.length === 0) tone = 'bg-rose-50 text-rose-800 border-rose-200';
+            else tone = 'bg-amber-50 text-amber-800 border-amber-200';
+
+            elements.coordFeedback.className = `mt-2 p-2.5 rounded-xl text-xs border space-y-1 ${tone}`;
+            elements.coordFeedback.innerHTML = lines.map(l => `<div>${l}</div>`).join('');
+        }
+
+        function addPointsFromInput() {
+            const text = elements.coordInput.value;
+            if (!text.trim()) {
+                showToast("좌표를 입력해 주세요. 예) (20,30)", "warning");
+                elements.coordInput.focus();
+                return;
+            }
+
+            const { points, invalid } = parseCoordinateText(text);
+            if (points.length === 0 && invalid.length === 0) {
+                invalid.push(text.trim());
+            }
+
+            const accepted = [];
+            const outOfRange = [];
+            points.forEach(p => {
+                if (isInCoordRange(p.x) && isInCoordRange(p.y)) accepted.push(p);
+                else outOfRange.push(p);
+            });
+
+            if (accepted.length > 0) {
+                const wasEmpty = state.points.length === 0;
+                accepted.forEach(p => state.points.push({ x: p.x, y: p.y }));
+                // 마우스로 첫 점을 찍을 때와 동일하게 절편 시작값을 첫 점의 y로 설정
+                if (wasEmpty) state.b = accepted[0].y;
+                updateMetricsUI();
+                render();
+            }
+
+            renderCoordFeedback(accepted, outOfRange, invalid);
+
+            // 추가하지 못한 입력만 입력창에 남겨 수정할 수 있게 함
+            const leftovers = [...outOfRange.map(p => p.raw), ...invalid];
+            elements.coordInput.value = leftovers.join(' ');
+            elements.coordInput.focus();
+
+            if (outOfRange.length === 0 && invalid.length === 0) {
+                showToast(`${accepted.length}개의 점을 추가했어요.`);
+            } else if (accepted.length > 0) {
+                showToast("일부 좌표만 추가했어요. 입력창 아래 안내를 확인하세요.", "warning");
+            } else {
+                showToast("좌표를 추가하지 못했어요. 입력창 아래 안내를 확인하세요.", "warning");
+            }
         }
 
         function setMode(newMode) {
@@ -859,6 +1059,7 @@ html_code = """
             resetModel(false);
             state.hoverPredictX = null;
             elements.predictBadge.classList.add('hidden');
+            hideCoordFeedback();
             updateMetricsUI();
             render();
             showToast("모든 데이터 점이 삭제되었습니다.");
@@ -892,6 +1093,15 @@ html_code = """
         elements.presetNoisy.addEventListener('click', () => loadPreset('noisy'));
         elements.presetOutlier.addEventListener('click', () => loadPreset('outlier'));
 
+        // [추가] 좌표 입력: 버튼 클릭 또는 Enter(한글 입력 조합 중 제외)로 추가, Shift+Enter는 줄바꿈
+        elements.coordAddBtn.addEventListener('click', addPointsFromInput);
+        elements.coordInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && e.keyCode !== 229) {
+                e.preventDefault();
+                addPointsFromInput();
+            }
+        });
+
         window.onload = function() {
             resizeCanvas();
             loadPreset('positive');
@@ -901,5 +1111,5 @@ html_code = """
 </html>
 """
 
-# 3. 스트림릿 화면에 HTML 배치 (높이 1000px로 세팅하여 스크롤 없이 넓게 표시)
-components.html(html_code, height=1000, scrolling=True)
+# 3. 스트림릿 화면에 HTML 배치 (좌표 입력 패널이 추가되어 높이를 1000px → 1250px로 늘림)
+components.html(html_code, height=1250, scrolling=True)
