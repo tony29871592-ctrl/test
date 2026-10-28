@@ -67,16 +67,17 @@ html_code = r"""
                 </div>
             </div>
 
+            <!-- 상단 단계 메뉴: 클릭하면 해당 페이지로 이동 (target="_top": 교구 화면이 아니라 스트림릿 전체 페이지를 이동) -->
             <nav class="flex space-x-1 bg-indigo-700/50 p-1 rounded-xl text-xs sm:text-sm">
-                <span class="px-3 py-1.5 rounded-lg text-indigo-100 cursor-help" title="왼쪽 사이드바에서 '1단계: 선형 회귀'를 눌러 이동하세요">
+                <a href="./" target="_top" data-page="" class="px-3 py-1.5 rounded-lg text-indigo-100 hover:bg-white/20 hover:text-white transition" title="'1단계: 선형 회귀' 페이지로 이동">
                     <i class="fa-solid fa-chart-line mr-1"></i> 1단계: 선형 회귀
-                </span>
+                </a>
                 <span class="px-3 py-1.5 rounded-lg font-semibold bg-white text-indigo-700 shadow-sm">
                     <i class="fa-solid fa-cube mr-1"></i> 2단계: 다중 회귀
                 </span>
-                <span class="px-3 py-1.5 rounded-lg text-indigo-100 cursor-help" title="왼쪽 사이드바에서 '3단계: 분류'를 눌러 이동하세요">
+                <a href="classification" target="_top" data-page="classification" class="px-3 py-1.5 rounded-lg text-indigo-100 hover:bg-white/20 hover:text-white transition" title="'3단계: 분류' 페이지로 이동">
                     <i class="fa-solid fa-shapes mr-1"></i> 3단계: 분류
-                </span>
+                </a>
             </nav>
         </div>
     </header>
@@ -890,6 +891,21 @@ html_code = r"""
             }
             loadPreset('basic');
         };
+    </script>
+    <script>
+        // 상단 단계 메뉴 클릭 → 스트림릿 왼쪽 사이드바의 같은 메뉴를 대신 눌러서 페이지 이동
+        //  - st.iframe 은 보안상 교구 화면이 바깥 페이지 주소를 직접 바꾸지 못해서 이 방법을 씁니다.
+        //  - 사이드바 메뉴를 찾지 못하면 a 태그의 기본 링크(href)로 이동합니다.
+        document.querySelectorAll('nav a[data-page]').forEach(a => a.addEventListener('click', (e) => {
+            try {
+                const links = window.parent.document.querySelectorAll('a[data-testid="stSidebarNavLink"]');
+                const target = [...links].find(l => new URL(l.href).pathname.replace(/\/$/, '').split('/').pop() === a.dataset.page);
+                if (target) {
+                    e.preventDefault();
+                    target.click();
+                }
+            } catch (err) { /* 바깥 페이지에 접근할 수 없으면 기본 링크 동작 사용 */ }
+        }));
     </script>
 </body>
 </html>
