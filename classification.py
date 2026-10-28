@@ -1414,16 +1414,18 @@ html_code = r"""
             });
             c.globalAlpha = 1;
 
-            const curve = (mm, color, width, alpha) => {
+            const curve = (mm, color, width, alpha, fixedY = y2, dash = []) => {
                 c.strokeStyle = color; c.lineWidth = width; c.globalAlpha = alpha;
+                c.setLineDash(dash);
                 c.beginPath();
                 for (let i = 0; i <= 200; i++) {
                     const v = R.min + i / 200 * (R.max - R.min);
-                    const py = Yp(sigmoid(logiZ(mm, v, y2)));
+                    const py = Yp(sigmoid(logiZ(mm, v, fixedY)));
                     if (i === 0) c.moveTo(X(v), py); else c.lineTo(X(v), py);
                 }
                 c.stroke();
                 c.globalAlpha = 1;
+                c.setLineDash([]);
             };
 
             // 지난 학습 단계의 곡선 (오래될수록 흐리게)
@@ -1446,8 +1448,37 @@ html_code = r"""
                     c.setLineDash([]);
                     c.fillStyle = '#fde047'; c.textAlign = 'left';
                     c.fillText(`p = 0.5 ↔ ${fmtVal(Math.round(xb * 10) / 10)}${f1.unit}`, Math.min(X(xb) + 4, P.l + pw - 90), Yp(0.3));
-                    boundaryText = ` 노란 점선(${fmtVal(Math.round(xb * 10) / 10)}${f1.unit})에서 확률이 0.5가 돼요.`;
+                    boundaryText = ` 노란 세로 점선(${fmtVal(Math.round(xb * 10) / 10)}${f1.unit})에서 확률이 0.5가 돼요.`;
                 }
+            }
+
+            // 새 펭귄(캔버스에서 찍은 점): 그 펭귄의 실제 x₂ 값으로 계산한 확률 위치에 표시
+            let queryText = '';
+            if (state.query) {
+                const qx = state.query.x, qy = state.query.y;
+                const qp = sigmoid(logiZ(m, qx, qy));
+                // 이 펭귄의 x₂ 값으로 고정한 곡선 (평균과 다르면 노란 점선 곡선으로 따로 표시)
+                const sameY = Math.abs(qy - y2) < 0.05;
+                if (!sameY) curve(m, '#facc15', 1.6, 0.85, qy, [5, 4]);
+                const px = X(qx), py = Yp(qp);
+                c.strokeStyle = 'rgba(250,204,21,0.8)'; c.setLineDash([2, 3]); c.lineWidth = 1;
+                c.beginPath(); c.moveTo(px, P.t + ph); c.lineTo(px, py); c.lineTo(P.l, py); c.stroke();
+                c.setLineDash([]);
+                // 별 모양
+                c.beginPath();
+                for (let k = 0; k < 10; k++) {
+                    const ang = -Math.PI / 2 + k * Math.PI / 5;
+                    const rr = k % 2 === 0 ? 8 : 3.6;
+                    c.lineTo(px + rr * Math.cos(ang), py + rr * Math.sin(ang));
+                }
+                c.closePath();
+                c.fillStyle = '#facc15'; c.fill();
+                c.strokeStyle = '#0f172a'; c.lineWidth = 1.5; c.stroke();
+                c.fillStyle = '#fde047'; c.font = "bold 10px 'Noto Sans KR', sans-serif";
+                c.textAlign = px > P.l + pw - 70 ? 'right' : 'left';
+                c.fillText(`★ ${pct(qp)}`, px + (c.textAlign === 'right' ? -10 : 10), Math.max(P.t + 10, py - 8));
+                queryText = `<br><span class="text-yellow-700">★ 새 펭귄(${f1.name} ${fmtVal(qx)}${f1.unit}, ${f2.name} ${fmtVal(qy)}${f2.unit})의 '${pos}일 확률'은 <strong>${pct(qp)}</strong>예요.`
+                    + (sameY ? '' : ` 이 펭귄은 ${f2.name}가 평균과 달라서, 자기 ${f2.name}(${fmtVal(qy)}${f2.unit})로 그린 <strong>노란 점선 곡선</strong> 위에 있어요.`) + `</span>`;
             }
 
             $('feature-prob-title').textContent = `${f1.name}에 따른 '${pos}일 확률'`;
@@ -1457,6 +1488,7 @@ html_code = r"""
                 : `${f2.name}를 훈련 데이터 평균 <strong>${fmtVal(Math.round(y2 * 10) / 10)}${f2.unit}</strong>로 고정하고, ${f1.name}만 바꿨을 때의 확률이에요. 흐린 곡선은 지난 학습 단계(${snaps.map(sn => sn.epoch).join(', ') || '-'} 에포크)의 모습이에요.`
                   + ` 곡선 한가운데에서 ${f1.name}가 1${f1.unit} 늘면 확률이 약 <strong>${pct(Math.min(1, slope))}p</strong> 바뀌어요(= |w₁| ÷ 4).${boundaryText}`
                   + (L.ovr ? ` '${pos} vs 나머지' 분류기 기준이고, 오른쪽 위 버튼으로 바꿀 수 있어요. (아래 σ(z) 그래프도 같이 바뀌어요)` : '');
+            $('feature-prob-caption').innerHTML += queryText;
         }
 
         function drawLineChart(series, opts) {
