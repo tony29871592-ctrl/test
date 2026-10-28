@@ -76,13 +76,14 @@ html_code = r"""
                 </div>
             </div>
 
+            <!-- 상단 단계 메뉴: 클릭하면 해당 페이지로 이동 (target="_top": 교구 화면이 아니라 스트림릿 전체 페이지를 이동) -->
             <nav class="flex space-x-1 bg-indigo-700/50 p-1 rounded-xl text-xs sm:text-sm">
-                <span class="px-3 py-1.5 rounded-lg text-indigo-100 cursor-help" title="왼쪽 사이드바에서 '1단계: 선형 회귀'를 눌러 이동하세요">
+                <a href="./" target="_top" data-page="" class="px-3 py-1.5 rounded-lg text-indigo-100 hover:bg-white/20 hover:text-white transition" title="'1단계: 선형 회귀' 페이지로 이동">
                     <i class="fa-solid fa-chart-line mr-1"></i> 1단계: 선형 회귀
-                </span>
-                <span class="px-3 py-1.5 rounded-lg text-indigo-100 cursor-help" title="왼쪽 사이드바에서 '2단계: 다중 회귀'를 눌러 이동하세요">
+                </a>
+                <a href="multiple_regression" target="_top" data-page="multiple_regression" class="px-3 py-1.5 rounded-lg text-indigo-100 hover:bg-white/20 hover:text-white transition" title="'2단계: 다중 회귀' 페이지로 이동">
                     <i class="fa-solid fa-cube mr-1"></i> 2단계: 다중 회귀
-                </span>
+                </a>
                 <span class="px-3 py-1.5 rounded-lg font-semibold bg-white text-indigo-700 shadow-sm">
                     <i class="fa-solid fa-shapes mr-1"></i> 3단계: 분류
                 </span>
@@ -304,6 +305,17 @@ html_code = r"""
                     <p id="sigmoid-caption" class="text-[11px] text-slate-500 mt-2 leading-relaxed break-keep"></p>
                 </div>
 
+                <!-- 특성 기준 확률 그래프 (로지스틱 전용): 학습할수록 곡선이 실제로 가팔라지는 모습 -->
+                <div data-tab="logi" class="tab-panel hidden bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+                    <h2 class="text-base font-bold text-slate-800 mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-area text-indigo-600"></i> <span id="feature-prob-title">특성에 따른 확률</span>
+                    </h2>
+                    <div class="w-full h-[200px] rounded-xl border border-slate-200 bg-slate-900 overflow-hidden">
+                        <canvas id="feature-prob-canvas" class="w-full h-full block"></canvas>
+                    </div>
+                    <p id="feature-prob-caption" class="text-[11px] text-slate-500 mt-2 leading-relaxed break-keep"></p>
+                </div>
+
                 <!-- 결정트리 제어 -->
                 <div data-tab="tree" class="tab-panel hidden bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
                     <h2 class="text-base font-bold text-slate-800 mb-3 flex items-center">
@@ -506,6 +518,7 @@ html_code = r"""
         const GRID = 110;        // 결정 영역을 계산할 격자 수 (가로·세로)
         const K_MAX = 30;        // K별 정확도 그래프의 최대 K
         const DEPTH_MAX = 10;    // 깊이별 정확도 그래프의 최대 깊이
+        const SNAPSHOT_EPOCHS = [5, 20, 50, 100, 200, 500, 1000, 2000, 5000];   // 흐린 곡선으로 남길 에포크
 
         const DATA = PENGUINS.map(r => ({ s: r[0], v: [r[1], r[2], r[3], r[4]], test: false }));
 
@@ -707,6 +720,7 @@ html_code = r"""
             L.totalEpochs = 0;
             L.isTraining = false;
             L.history = { train: [], test: [] };
+            L.snapshots = [];
             L.key = logiKey();
             if (L.ovr && !L.models.some(m => m.cls === L.viewClass)) L.viewClass = 2;
             setStatus('idle');
@@ -764,6 +778,10 @@ html_code = r"""
                 m.b -= L.lr * gb / N;
             });
             L.totalEpochs += 1;
+            // 특성 기준 확률 그래프에 '지난 학습 단계 곡선'을 흐리게 남기기 위해 몇몇 에포크의 가중치를 저장
+            if (SNAPSHOT_EPOCHS.includes(L.totalEpochs)) {
+                L.snapshots.push({ epoch: L.totalEpochs, models: L.models.map(m => ({ ...m })) });
+            }
             recordLoss();
         }
 
@@ -1193,7 +1211,92 @@ html_code = r"""
             const pos = SPECIES[m ? m.cls : L.pair[1]].short;
             $('sigmoid-caption').innerHTML = L.ovr
                 ? `'<strong>${pos}</strong> vs 나머지' 분류기의 시그모이드예요. 위쪽(1) 점은 ${pos}, 아래쪽(0) 점은 나머지 종이에요. 버튼으로 다른 분류기를 볼 수 있어요.`
-                : `세로축은 '<strong>${pos}일 확률</strong>'이에요. 위쪽(1) 점은 ${pos}, 아래쪽(0) 점은 ${SPECIES[L.pair[0]].short}이에요. 학습할수록 점들이 곡선의 양 끝으로 벌어져요. (z가 ±8을 넘으면 끝에 모아 표시)`;
+                : `세로축은 '<strong>${pos}일 확률</strong>'이에요. 위쪽(1) 점은 ${pos}, 아래쪽(0) 점은 ${SPECIES[L.pair[0]].short}이에요. 학습할수록 점들이 곡선의 양 끝으로 벌어져요. (z가 ±8을 넘으면 끝에 모아 표시)<br><strong>σ(z) 곡선의 모양은 학습해도 바뀌지 않아요.</strong> 바뀌는 건 점들의 z 값이에요. 곡선이 실제로 가팔라지는 모습은 아래 그래프에서 확인하세요.`;
+        }
+
+        // 가로축 = 가로축 특성(x₁), 세로축 = 확률. 세로축 특성(x₂)은 훈련 데이터 평균으로 고정
+        function drawFeatureProb() {
+            const cv = $('feature-prob-canvas');
+            if (cv.offsetParent === null) return;
+            const { c, w, h } = setupCanvas(cv);
+            const L = state.logi;
+            const m = L.ovr ? L.models.find(mm => mm.cls === L.viewClass) : L.models[0];
+            if (!m) return;
+            const f1 = FEATURES[state.fx], f2 = FEATURES[state.fy];
+            const y2 = L.st.my;                       // 고정한 x₂ 값 (훈련 데이터 평균)
+            const R = rx();
+            const P = { l: 34, r: 10, t: 10, b: 26 };
+            const pw = w - P.l - P.r, ph = h - P.t - P.b;
+            const X = (v) => P.l + (v - R.min) / (R.max - R.min) * pw;
+            const Yp = (v) => P.t + (1 - v) * ph;
+            const pos = SPECIES[m.cls].short;
+
+            c.fillStyle = '#0f172a'; c.fillRect(0, 0, w, h);
+            c.font = "10px 'Noto Sans KR', sans-serif";
+            c.strokeStyle = 'rgba(148,163,184,0.2)'; c.lineWidth = 1;
+            [0, 0.5, 1].forEach(v => {
+                c.beginPath(); c.moveTo(P.l, Yp(v)); c.lineTo(P.l + pw, Yp(v)); c.stroke();
+                c.fillStyle = '#94a3b8'; c.textAlign = 'right'; c.fillText(v.toFixed(1), P.l - 5, Yp(v) + 3);
+            });
+            niceTicks(R.min, R.max, 5).forEach(t => {
+                c.fillStyle = '#94a3b8'; c.textAlign = 'center'; c.fillText(fmtVal(t), X(t), P.t + ph + 14);
+            });
+            c.fillStyle = '#e2e8f0'; c.textAlign = 'right';
+            c.fillText(`${f1.name}(${f1.unit}) →`, P.l + pw, P.t + ph + 24);
+
+            // 훈련 데이터: 1번 종은 위(1), 나머지는 아래(0)
+            const rand = mulberry32(11);
+            trainPoints().forEach(p => {
+                const yv = p.s === m.cls ? 1 - rand() * 0.08 : rand() * 0.08;
+                c.fillStyle = SPECIES[p.s].color;
+                c.globalAlpha = 0.7;
+                c.beginPath(); c.arc(X(fx(p)), Yp(yv), 2.6, 0, Math.PI * 2); c.fill();
+            });
+            c.globalAlpha = 1;
+
+            const curve = (mm, color, width, alpha) => {
+                c.strokeStyle = color; c.lineWidth = width; c.globalAlpha = alpha;
+                c.beginPath();
+                for (let i = 0; i <= 200; i++) {
+                    const v = R.min + i / 200 * (R.max - R.min);
+                    const py = Yp(sigmoid(logiZ(mm, v, y2)));
+                    if (i === 0) c.moveTo(X(v), py); else c.lineTo(X(v), py);
+                }
+                c.stroke();
+                c.globalAlpha = 1;
+            };
+
+            // 지난 학습 단계의 곡선 (오래될수록 흐리게)
+            const snaps = L.snapshots.filter(sn => sn.epoch < L.totalEpochs);
+            snaps.forEach((sn, i) => {
+                const sm = sn.models.find(mm => mm.cls === m.cls);
+                curve(sm, '#cbd5e1', 1.3, 0.15 + 0.35 * (i + 1) / snaps.length);
+            });
+            // 현재 곡선
+            curve(m, '#818cf8', 2.8, 1);
+
+            // 확률 0.5가 되는 위치 (= 결정 경계)
+            const { W1, W2, B } = rawWeights(m);
+            let boundaryText = '';
+            if (Math.abs(W1) > 1e-9) {
+                const xb = -(W2 * y2 + B) / W1;
+                if (xb >= R.min && xb <= R.max) {
+                    c.strokeStyle = 'rgba(253,224,71,0.7)'; c.setLineDash([3, 3]); c.lineWidth = 1;
+                    c.beginPath(); c.moveTo(X(xb), P.t); c.lineTo(X(xb), P.t + ph); c.stroke();
+                    c.setLineDash([]);
+                    c.fillStyle = '#fde047'; c.textAlign = 'left';
+                    c.fillText(`p = 0.5 ↔ ${fmtVal(Math.round(xb * 10) / 10)}${f1.unit}`, Math.min(X(xb) + 4, P.l + pw - 90), Yp(0.3));
+                    boundaryText = ` 노란 점선(${fmtVal(Math.round(xb * 10) / 10)}${f1.unit})에서 확률이 0.5가 돼요.`;
+                }
+            }
+
+            $('feature-prob-title').textContent = `${f1.name}에 따른 '${pos}일 확률'`;
+            const slope = Math.abs(W1) / 4;   // 곡선 한가운데(p = 0.5)에서의 기울기 = |w₁| / 4
+            $('feature-prob-caption').innerHTML = L.totalEpochs === 0
+                ? `지금은 학습 전이라 w₁ = 0 이어서 곡선이 0.5에 <strong>평평하게</strong> 누워 있어요. 학습을 시작하면 곡선이 점점 일어서는 모습을 볼 수 있어요. (${f2.name}는 훈련 데이터 평균 ${fmtVal(Math.round(y2 * 10) / 10)}${f2.unit}로 고정)`
+                : `${f2.name}를 훈련 데이터 평균 <strong>${fmtVal(Math.round(y2 * 10) / 10)}${f2.unit}</strong>로 고정하고, ${f1.name}만 바꿨을 때의 확률이에요. 흐린 곡선은 지난 학습 단계(${snaps.map(sn => sn.epoch).join(', ') || '-'} 에포크)의 모습이에요.`
+                  + ` 곡선 한가운데에서 ${f1.name}가 1${f1.unit} 늘면 확률이 약 <strong>${pct(Math.min(1, slope))}p</strong> 바뀌어요(= |w₁| ÷ 4).${boundaryText}`
+                  + (L.ovr ? ` '${pos} vs 나머지' 분류기 기준이고, 위 버튼으로 바꿀 수 있어요.` : '');
         }
 
         function drawLineChart(series, opts) {
@@ -1550,7 +1653,7 @@ html_code = r"""
             updateSplitInfo();
             updatePrediction();
             draw();
-            if (state.tab === 'logi') drawSigmoid();
+            if (state.tab === 'logi') { drawSigmoid(); drawFeatureProb(); }
             if (state.tab === 'tree') {
                 const path = state.query ? model.predict(state.query.x, state.query.y).path : null;
                 renderTreeDiagram(path);
@@ -1712,6 +1815,7 @@ html_code = r"""
             state.logi.viewClass = parseInt(b.dataset.view, 10);
             updateLogiEquation();
             drawSigmoid();
+            drawFeatureProb();
         });
         $('epochs-slider').addEventListener('input', e => {
             state.logi.epochs = parseInt(e.target.value, 10);
@@ -1776,7 +1880,7 @@ html_code = r"""
 
         window.addEventListener('resize', () => {
             resizeCanvas();
-            if (model) { drawChart(); if (state.tab === 'logi') drawSigmoid(); }
+            if (model) { drawChart(); if (state.tab === 'logi') { drawSigmoid(); drawFeatureProb(); } }
         });
 
         window.onload = function () {
@@ -1786,6 +1890,21 @@ html_code = r"""
             setTab('knn');
             resizeCanvas();
         };
+    </script>
+    <script>
+        // 상단 단계 메뉴 클릭 → 스트림릿 왼쪽 사이드바의 같은 메뉴를 대신 눌러서 페이지 이동
+        //  - st.iframe 은 보안상 교구 화면이 바깥 페이지 주소를 직접 바꾸지 못해서 이 방법을 씁니다.
+        //  - 사이드바 메뉴를 찾지 못하면 a 태그의 기본 링크(href)로 이동합니다.
+        document.querySelectorAll('nav a[data-page]').forEach(a => a.addEventListener('click', (e) => {
+            try {
+                const links = window.parent.document.querySelectorAll('a[data-testid="stSidebarNavLink"]');
+                const target = [...links].find(l => new URL(l.href).pathname.replace(/\/$/, '').split('/').pop() === a.dataset.page);
+                if (target) {
+                    e.preventDefault();
+                    target.click();
+                }
+            } catch (err) { /* 바깥 페이지에 접근할 수 없으면 기본 링크 동작 사용 */ }
+        }));
     </script>
 </body>
 </html>
