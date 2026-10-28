@@ -181,20 +181,20 @@ html_code = r"""
                         <i class="fa-solid fa-folder-open text-indigo-500"></i> 데이터 세트 불러오기 (청바지 치수 데이터)
                     </h3>
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                        <button id="preset-all" class="p-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl font-medium text-xs sm:text-sm transition text-center border border-indigo-100">
-                            👖 전체 963명
-                        </button>
-                        <button id="preset-200" class="p-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl font-medium text-xs sm:text-sm transition text-center border border-emerald-100">
-                            🎲 무작위 200명
+                        <button id="preset-10" class="p-2 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl font-medium text-xs sm:text-sm transition text-center border border-rose-100">
+                            🎲 무작위 10명
                         </button>
                         <button id="preset-50" class="p-2 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl font-medium text-xs sm:text-sm transition text-center border border-amber-100">
                             🎲 무작위 50명
                         </button>
-                        <button id="preset-10" class="p-2 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl font-medium text-xs sm:text-sm transition text-center border border-rose-100">
-                            🎲 무작위 10명
+                        <button id="preset-200" class="p-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl font-medium text-xs sm:text-sm transition text-center border border-emerald-100">
+                            🎲 무작위 200명
+                        </button>
+                        <button id="preset-all" class="p-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl font-medium text-xs sm:text-sm transition text-center border border-indigo-100">
+                            👖 전체 963명
                         </button>
                     </div>
-                    <p class="text-[11px] text-slate-500 mt-2 break-keep">무작위 표본을 여러 번 불러와 보세요. 사람 수가 적을수록 학습할 때마다 가중치가 크게 달라져요. 이 데이터에는 몸무게가 정확히 65kg인 사람이 많아요(963명 중 242명). 몸무게 축에서 65 위치에 점들이 한 줄로 늘어선 이유예요.</p>
+                    <p class="text-[11px] text-slate-500 mt-2 break-keep">첫 화면은 963명 중 고정으로 뽑은 50명이에요. 버튼으로 다른 표본이나 전체 데이터를 불러와 보세요. 사람 수가 적을수록 학습할 때마다 가중치가 크게 달라져요. 이 데이터에는 몸무게가 정확히 65kg인 사람이 많아요(963명 중 242명). 몸무게 축에서 65 위치에 점들이 한 줄로 늘어선 이유예요.</p>
                 </div>
             </section>
 
@@ -245,9 +245,9 @@ html_code = r"""
                         <div>
                             <div class="flex justify-between items-center mb-1">
                                 <label for="lr-slider" class="text-xs sm:text-sm font-semibold text-slate-700">학습률 (Learning Rate, α)</label>
-                                <span id="lr-val" class="font-mono font-bold text-indigo-600 text-sm bg-indigo-50 px-2 py-0.5 rounded">0.30</span>
+                                <span id="lr-val" class="font-mono font-bold text-indigo-600 text-sm bg-indigo-50 px-2 py-0.5 rounded">0.01</span>
                             </div>
-                            <input type="range" id="lr-slider" min="0.01" max="1" step="0.01" value="0.3" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
+                            <input type="range" id="lr-slider" min="0.01" max="1" step="0.01" value="0.01" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
                             <p class="text-[11px] text-slate-400 mt-1">학습률이 너무 크면 오차가 줄지 않고 오히려 커질 수 있어요. (이 데이터는 3개 모두 쓰면 약 0.43, 2개만 쓰면 짝에 따라 약 0.5~0.65부터 발산해요)</p>
                         </div>
                     </div>
@@ -458,7 +458,7 @@ html_code = r"""
             showResiduals: true,
             epochs: 300,
             totalEpochs: 0,
-            lr: 0.3,
+            lr: 0.01,           // 처음에는 작게: 학습이 천천히 진행되는 모습을 볼 수 있음
             isTraining: false,
             diverged: false,
             query: null          // { x: [3], y: 예측값 }
@@ -930,18 +930,26 @@ html_code = r"""
         }
 
         // ---------------- 예시 데이터 ----------------
-        function loadPreset(n) {
+        // seed를 주면 항상 같은 사람들을 뽑음 (첫 화면용), 없으면 누를 때마다 새로 뽑음
+        function loadPreset(n, seed = null) {
             hideCoordFeedback();
             const rows = JEANS.slice();
+            let s = seed;
+            const rand = seed === null ? Math.random : () => {   // 간단한 시드 난수 (mulberry32)
+                s = (s + 0x6D2B79F5) | 0;
+                let t = Math.imul(s ^ (s >>> 15), 1 | s);
+                t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+                return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+            };
             if (n < rows.length) {
                 for (let i = rows.length - 1; i > 0; i--) {
-                    const k = Math.floor(Math.random() * (i + 1));
+                    const k = Math.floor(rand() * (i + 1));
                     [rows[i], rows[k]] = [rows[k], rows[i]];
                 }
             }
             state.points = rows.slice(0, n).map(r => ({ x: [r[0], r[1], r[2]], y: r[3] }));
             resetModel(false);
-            showToast(n >= JEANS.length ? "전체 데이터(963명)를 불러왔어요." : `무작위로 ${n}명을 뽑았어요.`);
+            if (seed === null) showToast(n >= JEANS.length ? "전체 데이터(963명)를 불러왔어요." : `무작위로 ${n}명을 뽑았어요.`);
         }
 
         // ---------------- 새 사람 예측 ----------------
@@ -1200,7 +1208,8 @@ html_code = r"""
                 elements.plotFallback.classList.remove('hidden');
             }
             buildQueryInputs();
-            loadPreset(JEANS.length);
+            // 첫 화면: 보기 편하도록 963명 중 50명만 (수업에서 모두 같은 화면을 보도록 항상 같은 50명)
+            loadPreset(50, 2024);
         };
     </script>
 
