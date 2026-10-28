@@ -291,29 +291,32 @@ html_code = r"""
                     </div>
                 </div>
 
+                <!-- 특성 기준 확률 그래프 (로지스틱 전용): 학습할수록 곡선이 실제로 가팔라지는 모습 -->
+                <div data-tab="logi" class="tab-panel hidden bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="flex flex-wrap justify-between items-center mb-2 gap-2">
+                        <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-area text-indigo-600"></i> <span id="feature-prob-title">특성에 따른 확률</span>
+                        </h2>
+                        <div id="sigmoid-class-btns" class="hidden inline-flex rounded-lg p-0.5 bg-slate-100 border border-slate-200 text-[11px]"></div>
+                    </div>
+                    <div class="w-full h-[200px] rounded-xl border border-slate-200 bg-slate-900 overflow-hidden">
+                        <canvas id="feature-prob-canvas" class="w-full h-full block"></canvas>
+                    </div>
+                    <p id="feature-prob-caption" class="text-[11px] text-slate-500 mt-2 leading-relaxed break-keep"></p>
+                </div>
+
+
                 <!-- 시그모이드 그래프 (로지스틱 전용) -->
                 <div data-tab="logi" class="tab-panel hidden bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
                     <div class="flex flex-wrap justify-between items-center mb-2 gap-2">
                         <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
                             <i class="fa-solid fa-wave-square text-indigo-600"></i> 시그모이드 함수 σ(z)
                         </h2>
-                        <div id="sigmoid-class-btns" class="hidden inline-flex rounded-lg p-0.5 bg-slate-100 border border-slate-200 text-[11px]"></div>
                     </div>
                     <div class="w-full h-[200px] rounded-xl border border-slate-200 bg-slate-900 overflow-hidden">
                         <canvas id="sigmoid-canvas" class="w-full h-full block"></canvas>
                     </div>
                     <p id="sigmoid-caption" class="text-[11px] text-slate-500 mt-2 leading-relaxed break-keep"></p>
-                </div>
-
-                <!-- 특성 기준 확률 그래프 (로지스틱 전용): 학습할수록 곡선이 실제로 가팔라지는 모습 -->
-                <div data-tab="logi" class="tab-panel hidden bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
-                    <h2 class="text-base font-bold text-slate-800 mb-2 flex items-center gap-2">
-                        <i class="fa-solid fa-chart-area text-indigo-600"></i> <span id="feature-prob-title">특성에 따른 확률</span>
-                    </h2>
-                    <div class="w-full h-[200px] rounded-xl border border-slate-200 bg-slate-900 overflow-hidden">
-                        <canvas id="feature-prob-canvas" class="w-full h-full block"></canvas>
-                    </div>
-                    <p id="feature-prob-caption" class="text-[11px] text-slate-500 mt-2 leading-relaxed break-keep"></p>
                 </div>
 
                 <!-- 결정트리 제어 -->
@@ -1210,8 +1213,8 @@ html_code = r"""
 
             const pos = SPECIES[m ? m.cls : L.pair[1]].short;
             $('sigmoid-caption').innerHTML = L.ovr
-                ? `'<strong>${pos}</strong> vs 나머지' 분류기의 시그모이드예요. 위쪽(1) 점은 ${pos}, 아래쪽(0) 점은 나머지 종이에요. 버튼으로 다른 분류기를 볼 수 있어요.`
-                : `세로축은 '<strong>${pos}일 확률</strong>'이에요. 위쪽(1) 점은 ${pos}, 아래쪽(0) 점은 ${SPECIES[L.pair[0]].short}이에요. 학습할수록 점들이 곡선의 양 끝으로 벌어져요. (z가 ±8을 넘으면 끝에 모아 표시)<br><strong>σ(z) 곡선의 모양은 학습해도 바뀌지 않아요.</strong> 바뀌는 건 점들의 z 값이에요. 곡선이 실제로 가팔라지는 모습은 아래 그래프에서 확인하세요.`;
+                ? `'<strong>${pos}</strong> vs 나머지' 분류기의 시그모이드예요. 위쪽(1) 점은 ${pos}, 아래쪽(0) 점은 나머지 종이에요. 위 그래프의 버튼으로 다른 분류기를 볼 수 있어요.`
+                : `세로축은 '<strong>${pos}일 확률</strong>'이에요. 위쪽(1) 점은 ${pos}, 아래쪽(0) 점은 ${SPECIES[L.pair[0]].short}이에요. 학습할수록 점들이 곡선의 양 끝으로 벌어져요. (z가 ±8을 넘으면 끝에 모아 표시)<br><strong>σ(z) 곡선의 모양은 학습해도 바뀌지 않아요.</strong> 바뀌는 건 점들의 z 값이에요. 곡선이 실제로 가팔라지는 모습은 위 그래프에서 확인하세요.`;
         }
 
         // 가로축 = 가로축 특성(x₁), 세로축 = 확률. 세로축 특성(x₂)은 훈련 데이터 평균으로 고정
@@ -1296,7 +1299,7 @@ html_code = r"""
                 ? `지금은 학습 전이라 w₁ = 0 이어서 곡선이 0.5에 <strong>평평하게</strong> 누워 있어요. 학습을 시작하면 곡선이 점점 일어서는 모습을 볼 수 있어요. (${f2.name}는 훈련 데이터 평균 ${fmtVal(Math.round(y2 * 10) / 10)}${f2.unit}로 고정)`
                 : `${f2.name}를 훈련 데이터 평균 <strong>${fmtVal(Math.round(y2 * 10) / 10)}${f2.unit}</strong>로 고정하고, ${f1.name}만 바꿨을 때의 확률이에요. 흐린 곡선은 지난 학습 단계(${snaps.map(sn => sn.epoch).join(', ') || '-'} 에포크)의 모습이에요.`
                   + ` 곡선 한가운데에서 ${f1.name}가 1${f1.unit} 늘면 확률이 약 <strong>${pct(Math.min(1, slope))}p</strong> 바뀌어요(= |w₁| ÷ 4).${boundaryText}`
-                  + (L.ovr ? ` '${pos} vs 나머지' 분류기 기준이고, 위 버튼으로 바꿀 수 있어요.` : '');
+                  + (L.ovr ? ` '${pos} vs 나머지' 분류기 기준이고, 오른쪽 위 버튼으로 바꿀 수 있어요. (아래 σ(z) 그래프도 같이 바뀌어요)` : '');
         }
 
         function drawLineChart(series, opts) {
