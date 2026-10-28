@@ -138,7 +138,7 @@ html_code = r"""
                                 <span>틀린 예측 표시</span>
                             </label>
                         </div>
-                        <span class="text-slate-400 text-xs"><i class="fa-solid fa-circle-info mr-1"></i>캔버스를 클릭하면 그 자리의 새 펭귄을 예측해요</span>
+                        <span class="text-slate-400 text-xs"><i class="fa-solid fa-circle-info mr-1"></i>캔버스를 클릭하면 그 자리의 새 펭귄을 예측해요 (결정트리: 분할선 클릭 = 질문 보기)</span>
                     </div>
                 </div>
 
@@ -278,10 +278,10 @@ html_code = r"""
                         <div>
                             <div class="flex justify-between items-center mb-1">
                                 <label for="lr-slider" class="text-xs sm:text-sm font-semibold text-slate-700">학습률 (Learning Rate, α)</label>
-                                <span id="lr-val" class="font-mono font-bold text-indigo-600 text-sm bg-indigo-50 px-2 py-0.5 rounded">0.50</span>
+                                <span id="lr-val" class="font-mono font-bold text-indigo-600 text-sm bg-indigo-50 px-2 py-0.5 rounded">0.05</span>
                             </div>
-                            <input type="range" id="lr-slider" min="0.01" max="2" step="0.01" value="0.5" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
-                            <p class="text-[11px] text-slate-400 mt-1 break-keep">학습률이 작으면 결정 경계가 아주 천천히 움직여요. 0.05와 1.5를 비교해 보세요.</p>
+                            <input type="range" id="lr-slider" min="0.01" max="2" step="0.01" value="0.05" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
+                            <p class="text-[11px] text-slate-400 mt-1 break-keep">학습률이 작으면 결정 경계가 아주 천천히 움직여요. 처음에는 0.05로 천천히 학습하는 모습을 보고, 0.5나 1.5로 올려 비교해 보세요.</p>
                         </div>
                     </div>
 
@@ -335,13 +335,14 @@ html_code = r"""
                         </div>
                         <div>
                             <div class="flex justify-between items-center mb-1">
-                                <label for="leaf-slider" class="text-xs sm:text-sm font-semibold text-slate-700">잎 노드의 최소 펭귄 수</label>
+                                <label for="leaf-slider" class="text-xs sm:text-sm font-semibold text-slate-700">리프 노드의 최소 펭귄 수</label>
                                 <span id="leaf-val" class="font-mono font-bold text-indigo-600 text-sm bg-indigo-50 px-2 py-0.5 rounded">1마리</span>
                             </div>
                             <input type="range" id="leaf-slider" min="1" max="30" step="1" value="1" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
                             <p class="text-[11px] text-slate-400 mt-1 break-keep">값을 키우면 너무 적은 펭귄만 남는 질문을 막아서 과적합이 줄어요.</p>
                         </div>
                         <div id="tree-info" class="grid grid-cols-3 gap-2 text-center"></div>
+                        <div id="split-info" class="p-3 rounded-xl border text-xs leading-relaxed break-keep"></div>
                     </div>
                 </div>
 
@@ -429,7 +430,7 @@ html_code = r"""
                         <i class="fa-solid fa-lightbulb text-amber-600"></i> 결정트리는 스무고개!
                     </h3>
                     <div class="space-y-2 text-xs text-amber-900 break-keep">
-                        <div class="bg-white p-2.5 rounded-xl border border-amber-200">'부리 길이 ≤ 42.4mm?' 같은 <strong>예/아니오 질문</strong>을 이어 가며 펭귄을 나눠요. 마지막 칸(잎 노드)에서 가장 많은 종이 정답이에요.</div>
+                        <div class="bg-white p-2.5 rounded-xl border border-amber-200">'부리 길이 ≤ 42.4mm?' 같은 <strong>예/아니오 질문</strong>을 이어 가며 펭귄을 나눠요. 마지막 칸(리프 노드, leaf node)에서 가장 많은 종이 정답이에요.</div>
                         <div class="bg-white p-2.5 rounded-xl border border-amber-200">질문은 <strong>지니 불순도</strong>(여러 종이 섞인 정도)를 가장 많이 줄이는 것으로 골라요. 지니 0 = 한 종만 남은 상태예요.</div>
                         <p class="text-amber-800">질문 하나가 특성 하나만 보기 때문에 결정 영역이 <strong>축에 평행한 직사각형</strong> 모양이 돼요. 깊이를 키우면 훈련 정확도는 오르지만 테스트 정확도는 떨어질 수 있어요.</p>
                     </div>
@@ -442,7 +443,7 @@ html_code = r"""
                     <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
                         <i class="fa-solid fa-sitemap text-indigo-600"></i> AI가 만든 결정트리
                     </h2>
-                    <span class="text-xs text-slate-400"><i class="fa-solid fa-circle-info mr-1"></i>왼쪽 가지 = 예(≤), 오른쪽 가지 = 아니오(&gt;) · 새 펭귄의 경로는 노란색 · 옆으로 스크롤할 수 있어요</span>
+                    <span class="text-xs text-slate-400"><i class="fa-solid fa-circle-info mr-1"></i>질문 노드를 클릭하면 캔버스에서 나뉘는 모습을 볼 수 있어요 · 왼쪽 가지 = 예(≤), 오른쪽 가지 = 아니오(&gt;) · 새 펭귄의 경로는 노란색 · 옆으로 스크롤할 수 있어요</span>
                 </div>
                 <div id="tree-diagram" class="w-full overflow-x-auto overflow-y-hidden rounded-xl border border-slate-200 bg-slate-50 p-2"></div>
             </section>
@@ -547,11 +548,11 @@ html_code = r"""
             query: null,           // 새 펭귄 { x, y } (현재 축의 실제 단위)
             knn: { k: 5, scale: true },
             logi: {
-                pair: [0, 2], ovr: false, epochs: 200, lr: 0.5,
+                pair: [0, 2], ovr: false, epochs: 200, lr: 0.05,   // 처음에는 작게: 결정 경계가 천천히 움직이는 모습을 볼 수 있음
                 models: [], st: null, key: '', totalEpochs: 0, isTraining: false,
                 history: { train: [], test: [] }, viewClass: 2
             },
-            tree: { depth: 3, minLeaf: 1, root: null }
+            tree: { depth: 3, minLeaf: 1, root: null, selPath: null }   // selPath: 선택한 질문 노드의 위치('L', 'LR' 등)
         };
 
         let model = null;           // 현재 탭의 모델: { predict(x, y) → { proba: [3], cls } }
@@ -863,8 +864,48 @@ html_code = r"""
             return path;
         }
 
+        // 질문 노드마다 번호(Q1, Q2 …, 위에서부터 차례로), 위치 문자열(path), 담당 영역(bounds)을 붙임
+        function annotateTree(root) {
+            const queue = [root];
+            let q = 0;
+            root.path = '';
+            root.bounds = { x0: rx().min, x1: rx().max, y0: ry().min, y1: ry().max };
+            while (queue.length) {
+                const n = queue.shift();
+                if (!n.left) continue;
+                n.qnum = ++q;
+                const b = n.bounds, t = n.threshold;
+                n.left.path = n.path + 'L';
+                n.right.path = n.path + 'R';
+                n.left.bounds = n.feature === 0 ? { ...b, x1: t } : { ...b, y1: t };
+                n.right.bounds = n.feature === 0 ? { ...b, x0: t } : { ...b, y0: t };
+                queue.push(n.left, n.right);
+            }
+        }
+
+        function selectedNode() {
+            const p = state.tree.selPath;
+            if (p === null || !state.tree.root) return null;
+            let n = state.tree.root;
+            for (const ch of p) { if (!n.left) return null; n = ch === 'L' ? n.left : n.right; }
+            return n.left ? n : null;
+        }
+
+        function internalNodes() {
+            const list = [];
+            (function walk(n) { if (!n || !n.left) return; list.push(n); walk(n.left); walk(n.right); })(state.tree.root);
+            return list;
+        }
+
+        // 분할선의 화면 좌표 (질문 노드가 담당하는 영역 안에서만 그어짐)
+        function splitSegment(n) {
+            const b = n.bounds, t = n.threshold;
+            return n.feature === 0 ? [toPx(t, b.y0), toPx(t, b.y1)] : [toPx(b.x0, t), toPx(b.x1, t)];
+        }
+
         function buildTree() {
             const root = buildTreeNode(trainPoints(), 0, state.tree.depth, state.tree.minLeaf);
+            annotateTree(root);
             state.tree.root = root;
             return {
                 type: 'tree',
@@ -1003,6 +1044,116 @@ html_code = r"""
             ctx.restore();
         }
 
+        function drawTreeSplits() {
+            const sel = selectedNode();
+            internalNodes().forEach(n => {
+                const [a, b] = splitSegment(n);
+                ctx.strokeStyle = n === sel ? '#fde047' : 'rgba(255,255,255,0.6)';
+                ctx.lineWidth = n === sel ? 3.5 : 1.5;
+                ctx.setLineDash([]);
+                ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
+            });
+            // 번호 배지는 선 위에 따로 (선끼리 겹쳐도 번호가 보이도록)
+            internalNodes().forEach(n => {
+                const [a, b] = splitSegment(n);
+                const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+                ctx.beginPath(); ctx.arc(mx, my, 9, 0, Math.PI * 2);
+                ctx.fillStyle = n === sel ? '#fde047' : '#1e293b';
+                ctx.fill();
+                ctx.lineWidth = 1.5; ctx.strokeStyle = n === sel ? '#0f172a' : '#ffffff'; ctx.stroke();
+                ctx.fillStyle = n === sel ? '#0f172a' : '#ffffff';
+                ctx.font = "bold 10px 'Noto Sans KR', sans-serif";
+                ctx.textAlign = 'center';
+                ctx.fillText(String(n.qnum), mx, my + 3.5);
+            });
+        }
+
+        function drawSelectedSplit() {
+            const n = selectedNode();
+            if (!n) return;
+            const b = n.bounds;
+            const [p0x, p0y] = toPx(b.x0, b.y1);   // 왼쪽 위
+            const [p1x, p1y] = toPx(b.x1, b.y0);   // 오른쪽 아래
+            // 이 질문이 담당하는 영역 바깥을 어둡게
+            ctx.fillStyle = 'rgba(15,23,42,0.6)';
+            ctx.beginPath();
+            ctx.rect(plot.x, plot.y, plot.w, plot.h);
+            ctx.rect(p0x, p0y, p1x - p0x, p1y - p0y);
+            ctx.fill('evenodd');
+            ctx.strokeStyle = '#fde047'; ctx.lineWidth = 1.5; ctx.setLineDash([5, 4]);
+            ctx.strokeRect(p0x, p0y, p1x - p0x, p1y - p0y);
+            ctx.setLineDash([]);
+            // 다시 선택한 선과 번호를 맨 위에
+            const [a, c] = splitSegment(n);
+            ctx.strokeStyle = '#fde047'; ctx.lineWidth = 3.5;
+            ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(c[0], c[1]); ctx.stroke();
+            const mx = (a[0] + c[0]) / 2, my = (a[1] + c[1]) / 2;
+            ctx.beginPath(); ctx.arc(mx, my, 9, 0, Math.PI * 2);
+            ctx.fillStyle = '#fde047'; ctx.fill();
+            ctx.lineWidth = 1.5; ctx.strokeStyle = '#0f172a'; ctx.stroke();
+            ctx.fillStyle = '#0f172a'; ctx.font = "bold 10px 'Noto Sans KR', sans-serif"; ctx.textAlign = 'center';
+            ctx.fillText(String(n.qnum), mx, my + 3.5);
+            // 예 / 아니오 쪽 표시
+            const [tx, ty] = toPx(n.threshold, n.threshold);
+            const yesC = n.feature === 0 ? [(p0x + tx) / 2, (p0y + p1y) / 2] : [(p0x + p1x) / 2, (ty + p1y) / 2];
+            const noC = n.feature === 0 ? [(tx + p1x) / 2, (p0y + p1y) / 2] : [(p0x + p1x) / 2, (p0y + ty) / 2];
+            const label = (pt, text, color) => {
+                ctx.font = "bold 12px 'Noto Sans KR', sans-serif";
+                const w = ctx.measureText(text).width + 14;
+                ctx.fillStyle = 'rgba(15,23,42,0.85)';
+                ctx.beginPath(); ctx.roundRect(pt[0] - w / 2, pt[1] - 11, w, 22, 6); ctx.fill();
+                ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.stroke();
+                ctx.fillStyle = color; ctx.textAlign = 'center';
+                ctx.fillText(text, pt[0], pt[1] + 4);
+            };
+            const fname = FEATURES[n.feature === 0 ? state.fx : state.fy].name;
+            label(yesC, `예: ${fname} ≤ ${fmtVal(n.threshold)} (${n.left.n}마리)`, '#a5b4fc');
+            label(noC, `아니오: > ${fmtVal(n.threshold)} (${n.right.n}마리)`, '#fda4af');
+        }
+
+        // 캔버스 좌표 (px, py) 근처의 분할선 찾기 (없으면 null)
+        function hitSplit(px, py) {
+            let best = null, bestD = 7;
+            internalNodes().forEach(n => {
+                const [a, b] = splitSegment(n);
+                const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+                const dx = b[0] - a[0], dy = b[1] - a[1];
+                const len2 = dx * dx + dy * dy || 1;
+                const t = Math.max(0, Math.min(1, ((px - a[0]) * dx + (py - a[1]) * dy) / len2));
+                let d = Math.hypot(px - (a[0] + t * dx), py - (a[1] + t * dy));
+                if (Math.hypot(px - mx, py - my) <= 10) d = 0;   // 번호 배지
+                if (d < bestD) { bestD = d; best = n; }
+            });
+            return best;
+        }
+
+        function toggleSplit(n) {
+            state.tree.selPath = (n && state.tree.selPath !== n.path) ? n.path : null;
+            refresh(false);
+        }
+
+        function updateQuestionInfo() {
+            const box = $('split-info');
+            const n = selectedNode();
+            if (!n) {
+                box.className = 'p-3 rounded-xl border text-xs leading-relaxed break-keep bg-slate-50 border-dashed border-slate-300 text-slate-500';
+                box.innerHTML = `<i class="fa-solid fa-hand-pointer mr-1 text-indigo-500"></i>아래 <strong>트리 그림의 질문 노드</strong>나 캔버스의 <strong>흰 분할선(번호)</strong>을 클릭하면, 그 질문이 펭귄들을 어떻게 나누는지 볼 수 있어요.`;
+                return;
+            }
+            const fname = FEATURES[n.feature === 0 ? state.fx : state.fy].name;
+            const unit = FEATURES[n.feature === 0 ? state.fx : state.fy].unit;
+            const after = (n.left.n * n.left.gini + n.right.n * n.right.gini) / n.n;
+            const part = (c, title, color) => `<div class="flex items-center gap-2 mt-1"><span class="w-14 font-bold" style="color:${color}">${title}</span>`
+                + `<div class="flex-grow h-2.5 bg-slate-100 rounded-full overflow-hidden flex">${c.counts.map((v, s) => v ? `<div style="width:${v / c.n * 100}%;background:${SPECIES[s].color}"></div>` : '').join('')}</div>`
+                + `<span class="w-32 shrink-0 whitespace-nowrap text-right font-mono text-[11px] text-slate-600">${c.n}마리 · 지니 ${c.gini.toFixed(3)}</span></div>`;
+            box.className = 'p-3 rounded-xl border text-xs leading-relaxed break-keep bg-yellow-50 border-yellow-300 text-slate-700';
+            box.innerHTML = `<div class="font-bold text-slate-800 mb-1">Q${n.qnum}. ${fname} ≤ ${fmtVal(n.threshold)}${unit} 인가요?</div>`
+                + `<div class="text-slate-600">이 질문까지 온 펭귄 <strong>${n.n}마리</strong> (${SPECIES.map((sp, i) => n.counts[i] ? `${sp.short} ${n.counts[i]}` : '').filter(Boolean).join(', ')}) · 지니 ${n.gini.toFixed(3)}</div>`
+                + part(n.left, '예 ≤', '#4f46e5') + part(n.right, '아니오 >', '#e11d48')
+                + `<div class="mt-2 text-slate-600">나눈 뒤 지니(가중 평균) <span class="font-mono">${after.toFixed(3)}</span> → 불순도가 <strong class="text-emerald-700">${(n.gini - after).toFixed(3)}</strong> 줄었어요. 가능한 모든 질문 중 이 값이 가장 큰 질문을 고른 거예요.</div>`
+                + `<div class="mt-1 text-[11px] text-slate-400">한 번 더 클릭하면 선택이 풀려요.</div>`;
+        }
+
         function drawStar(cx, cy, r) {
             ctx.beginPath();
             for (let i = 0; i < 10; i++) {
@@ -1074,6 +1225,9 @@ html_code = r"""
                 });
             }
 
+            // 결정트리의 분할선 (질문 번호 표시)
+            if (model && model.type === 'tree') drawTreeSplits();
+
             // 데이터 점
             const cls = activeClasses();
             ctx.save();
@@ -1112,6 +1266,9 @@ html_code = r"""
                     ctx.stroke();
                 }
             });
+
+            // 선택한 질문 노드 강조 (다른 영역은 어둡게)
+            if (model && model.type === 'tree') drawSelectedSplit();
 
             // 새 펭귄 (+ KNN 이웃 연결선)
             if (state.query && model) {
@@ -1451,8 +1608,10 @@ html_code = r"""
                     if (bw > 0) bar += `<rect x="${bx}" y="${y + NH - 14}" width="${bw}" height="7" fill="${SPECIES[s].color}"/>`;
                     bx += bw;
                 });
-                boxes += `<g><title>${SPECIES.map((s, i) => `${s.short} ${n.counts[i]}`).join(' · ')}</title>`
-                    + `<rect x="${x - NW / 2}" y="${y}" width="${NW}" height="${NH}" rx="10" fill="${isLeaf ? `rgba(${sp.rgb.join(',')},0.14)` : '#ffffff'}" stroke="${hl ? '#eab308' : isLeaf ? sp.color : '#cbd5e1'}" stroke-width="${hl ? 3.5 : 1.5}"/>`
+                const sel = !isLeaf && n.path === state.tree.selPath;
+                boxes += `<g ${isLeaf ? '' : `data-path="T${n.path}" style="cursor:pointer"`}><title>${SPECIES.map((s, i) => `${s.short} ${n.counts[i]}`).join(' · ')}${isLeaf ? '' : ' (클릭하면 캔버스에서 나뉘는 모습을 볼 수 있어요)'}</title>`
+                    + `<rect x="${x - NW / 2}" y="${y}" width="${NW}" height="${NH}" rx="10" fill="${isLeaf ? `rgba(${sp.rgb.join(',')},0.14)` : sel ? '#fefce8' : '#ffffff'}" stroke="${sel ? '#4f46e5' : hl ? '#eab308' : isLeaf ? sp.color : '#cbd5e1'}" stroke-width="${sel || hl ? 3.5 : 1.5}"/>`
+                    + (isLeaf ? '' : `<circle cx="${x - NW / 2 + 2}" cy="${y + 2}" r="10" fill="${sel ? '#fde047' : '#1e293b'}" stroke="#ffffff" stroke-width="1.5"/><text x="${x - NW / 2 + 2}" y="${y + 6}" text-anchor="middle" font-size="10" font-weight="700" fill="${sel ? '#0f172a' : '#ffffff'}">${n.qnum}</text>`)
                     + `<text x="${x}" y="${y + 19}" text-anchor="middle" font-size="12" font-weight="700" fill="${isLeaf ? sp.color : '#1e293b'}">${escapeHtml(title)}</text>`
                     + `<text x="${x}" y="${y + 35}" text-anchor="middle" font-size="10" fill="#64748b">지니 ${n.gini.toFixed(3)} · ${n.n}마리</text>`
                     + bar + `</g>`;
@@ -1460,8 +1619,9 @@ html_code = r"""
             })(root);
 
             $('tree-diagram').innerHTML = `<svg width="${Math.max(W, 300)}" height="${H}" viewBox="0 0 ${Math.max(W, 300)} ${H}" style="font-family:'Noto Sans KR',sans-serif;display:block;margin:0 auto">${edges}${boxes}</svg>`;
-            $('tree-info').innerHTML = [['질문 노드', nodes - leaves], ['잎 노드', leaves], ['실제 깊이', maxDepth]]
+            $('tree-info').innerHTML = [['질문 노드', nodes - leaves], ['리프 노드', leaves], ['실제 깊이', maxDepth]]
                 .map(([k, v]) => `<div class="p-2 bg-slate-50 border border-slate-200 rounded-xl"><span class="text-[11px] text-slate-500 block">${k}</span><span class="font-mono font-bold text-indigo-700">${v}</span></div>`).join('');
+            updateQuestionInfo();
         }
 
         // ================================================================
@@ -1602,7 +1762,7 @@ html_code = r"""
                 }
             } else {
                 const leaf = r.path[r.path.length - 1];
-                html += probaBars(r.proba, `도착한 잎 노드의 펭귄 비율 (${leaf.n}마리)`);
+                html += probaBars(r.proba, `도착한 리프 노드의 펭귄 비율 (${leaf.n}마리)`);
                 const steps = r.path.slice(0, -1).map(n => {
                     const f = n.feature === 0 ? state.fx : state.fy;
                     const v = n.feature === 0 ? x : y;
@@ -1611,7 +1771,7 @@ html_code = r"""
                 });
                 html += `<div class="mt-2 p-2.5 bg-indigo-50/60 border border-indigo-100 rounded-xl text-indigo-900 text-[11px] leading-relaxed">`
                     + (steps.length ? steps.map((s, i) => `${i + 1}. ${s}`).join('<br>') + `<br>` : '')
-                    + `→ 잎 노드에서 가장 많은 종인 <strong>${sp.short}</strong>로 예측했어요. 아래 트리 그림에 노란색으로 경로를 표시했어요.</div>`;
+                    + `→ 리프 노드에서 가장 많은 종인 <strong>${sp.short}</strong>로 예측했어요. 아래 트리 그림에 노란색으로 경로를 표시했어요.</div>`;
             }
             box.innerHTML = html;
         }
@@ -1768,6 +1928,7 @@ html_code = r"""
             $('feature-x').value = state.fx;
             $('feature-y').value = state.fy;
             state.query = null;
+            state.tree.selPath = null;
             $('query-feedback').classList.add('hidden');
             updateQueryHint();
             refresh();
@@ -1854,7 +2015,23 @@ html_code = r"""
             if (px < plot.x || px > plot.x + plot.w || py < plot.y || py > plot.y + plot.h) return null;
             return fromPx(px, py);
         }
+        $('tree-diagram').addEventListener('click', e => {
+            const g = e.target.closest('[data-path]');
+            if (!g) return;
+            const path = g.dataset.path.slice(1);
+            toggleSplit(internalNodes().find(n => n.path === path));
+        });
+
+        function canvasXY(e) {
+            const rect = canvas.getBoundingClientRect();
+            return [e.clientX - rect.left, e.clientY - rect.top];
+        }
         canvas.addEventListener('pointerdown', e => {
+            // 결정트리 탭: 분할선(번호)을 누르면 그 질문을 선택
+            if (state.tab === 'tree') {
+                const hit = hitSplit(...canvasXY(e));
+                if (hit) return toggleSplit(hit);
+            }
             const d = eventToData(e);
             if (!d) return;
             state.query = { x: Math.round(d[0] * 10) / 10, y: Math.round(d[1] * 10) / 10 };
@@ -1865,6 +2042,7 @@ html_code = r"""
         canvas.addEventListener('pointermove', e => {
             const d = eventToData(e);
             const badge = $('hover-badge');
+            canvas.style.cursor = state.tab === 'tree' && hitSplit(...canvasXY(e)) ? 'pointer' : '';
             if (!d) { badge.classList.add('hidden'); return; }
             const { cls } = model.predict(d[0], d[1]);
             badge.innerHTML = `${FEATURES[state.fx].name} <span class="font-bold text-yellow-300">${fmtVal(Math.round(d[0] * 10) / 10)}</span> · ${FEATURES[state.fy].name} <span class="font-bold text-yellow-300">${fmtVal(Math.round(d[1] * 10) / 10)}</span> ➔ <span class="font-bold" style="color:${SPECIES[cls].color}">${SPECIES[cls].short}</span>`;
