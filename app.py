@@ -7,6 +7,7 @@ import streamlit.components.v1 as components
 #  - 맨 아래 st.navigation 에 등록된 순서대로 사이드바 메뉴가 만들어집니다.
 #      1단계: 선형 회귀  → 이 파일 안의 linear_regression_page()
 #      2단계: 다중 회귀  → 같은 폴더의 multiple_regression.py
+#      3단계: 분류       → 같은 폴더의 classification.py (KNN·로지스틱 회귀·결정트리 탭)
 #  - streamlit 1.36 이상에서 동작합니다. (1.56 이상이면 화면 높이가 내용에 맞춰 자동 조절됨)
 # =====================================================================
 
@@ -101,6 +102,9 @@ LINEAR_HTML = r"""
                 </span>
                 <span class="px-3 py-1.5 rounded-lg text-indigo-100 cursor-help" title="왼쪽 사이드바에서 '2단계: 다중 회귀'를 눌러 이동하세요">
                     <i class="fa-solid fa-cube mr-1"></i> 2단계: 다중 회귀
+                </span>
+                <span class="px-3 py-1.5 rounded-lg text-indigo-100 cursor-help" title="왼쪽 사이드바에서 '3단계: 분류'를 눌러 이동하세요">
+                    <i class="fa-solid fa-shapes mr-1"></i> 3단계: 분류
                 </span>
             </nav>
         </div>
@@ -1141,5 +1145,6 @@ def linear_regression_page():
 pg = st.navigation([
     st.Page(linear_regression_page, title="1단계: 선형 회귀", icon="📈", default=True),
     st.Page("multiple_regression.py", title="2단계: 다중 회귀", icon="🧊", url_path="multiple_regression"),
+    st.Page("classification.py", title="3단계: 분류", icon="🐧", url_path="classification"),
 ])
 pg.run()
