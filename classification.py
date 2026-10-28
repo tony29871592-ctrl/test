@@ -419,7 +419,7 @@ html_code = r"""
                             <span class="block text-amber-700 mt-0.5"><span class="font-bold">③ 확률 0.5 이상</span>이면 1번 종으로 분류해요. z = 0 인 곳이 결정 경계(직선)예요.</span>
                         </div>
                         <div class="bg-white p-2.5 rounded-xl border border-amber-200">
-                            학습은 선형 회귀와 같은 <strong>경사하강법</strong>이지만, 줄이는 값이 MSE가 아니라 <strong>교차 엔트로피 손실</strong>이에요. 정답에 낮은 확률을 줄수록 손실이 크게 늘어나요.
+                            학습은 선형 회귀와 같은 <strong>경사하강법</strong>이지만, 줄이는 값이 MSE가 아니라 <strong>교차 엔트로피 손실</strong>이에요.<span class="block mt-1 font-mono text-amber-800">손실 = −ln(정답 종에 준 확률) 의 평균</span><span class="block text-amber-700">ln은 자연로그(밑 e)예요. 정답에 확률 1을 주면 손실 0, 0.5를 주면 ln 2 ≈ 0.69예요. 정답에 낮은 확률을 줄수록 손실이 크게 늘어나요.</span>
                         </div>
                         <p class="text-amber-800">3종을 분류할 때는 '아델리 vs 나머지', '턱끈 vs 나머지', '젠투 vs 나머지' 분류기 3개를 따로 학습하고, 확률이 가장 높은 종을 골라요(일대다, One-vs-Rest).</p>
                     </div>
@@ -1566,7 +1566,7 @@ html_code = r"""
                 );
                 $('chart-caption').innerHTML = n
                     ? `현재 훈련 손실 <strong class="font-mono">${H.train[n - 1].toFixed(3)}</strong>, 테스트 손실 <strong class="font-mono">${H.test[n - 1].toFixed(3)}</strong>. 손실이 0에 가까울수록 정답 종에 높은 확률을 주고 있다는 뜻이에요.`
-                    : `학습을 시작하면 에포크마다 손실이 어떻게 줄어드는지 그려져요. 처음(가중치 0)에는 모든 펭귄에게 확률 0.5를 줘서 손실이 약 0.69예요.`;
+                    : `학습을 시작하면 에포크마다 손실이 어떻게 줄어드는지 그려져요. 처음(가중치 0)에는 모든 펭귄에게 확률 0.5를 줘서 손실이 −ln(0.5) ≈ 0.69예요. (손실 = −ln(정답 종에 준 확률)의 평균, ln은 자연로그)`;
                 return;
             }
 
