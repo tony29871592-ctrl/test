@@ -74,6 +74,9 @@ html_code = r"""
                 <span class="px-3 py-1.5 rounded-lg font-semibold bg-white text-indigo-700 shadow-sm">
                     <i class="fa-solid fa-cube mr-1"></i> 2단계: 다중 회귀
                 </span>
+                <span class="px-3 py-1.5 rounded-lg text-indigo-100 cursor-help" title="왼쪽 사이드바에서 '3단계: 분류'를 눌러 이동하세요">
+                    <i class="fa-solid fa-shapes mr-1"></i> 3단계: 분류
+                </span>
             </nav>
         </div>
     </header>
